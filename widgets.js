@@ -313,7 +313,7 @@
       if (a && !e.target.closest('a')) setCur(+a.dataset.s, false);
     });
     D.addEventListener('keydown', function (e) {
-      if (D.body.dataset.page !== 'poem.html' || (e.target.tagName || '').toLowerCase() === 'input') return;
+      if (D.body.dataset.page !== 'poem.html' || (e.target.tagName || '').toLowerCase() === 'input' || $('.lb:not([hidden])')) return;
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown' && false) { setCur(Math.min(n - 1, cur + 1), true); }
       if (e.key === 'ArrowLeft') { setCur(Math.max(0, cur - 1), true); }
     });
@@ -367,8 +367,33 @@
     if (location.hash) { var t = D.getElementById(location.hash.slice(1)); if (t) setTimeout(function () { t.scrollIntoView({ block: 'center' }); }, 300); }
   });
 
+
+  /* ====================================================================== lightbox */
+  function initLightbox() {
+    var items = $$('[data-lb]'); if (!items.length) return;
+    var box = h('div', 'lb'); box.hidden = true; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
+    box.innerHTML = '<span class="lb-cnt"></span><button type="button" class="lb-x" aria-label="Close">&times;</button><button type="button" class="lb-p" aria-label="Previous">&larr;</button><img class="lb-img" alt=""><p class="lb-cap"></p><button type="button" class="lb-n" aria-label="Next">&rarr;</button>';
+    D.body.appendChild(box);
+    var img = $('.lb-img', box), cap = $('.lb-cap', box), cnt = $('.lb-cnt', box), i = 0, last = null;
+    function show(k) {
+      i = (k + items.length) % items.length; var b = items[i], l = EX.lang();
+      img.src = b.dataset.lb; img.alt = (b.querySelector('img') || {}).alt || ''; cap.textContent = l === 'hi' ? b.dataset.capHi : b.dataset.capEn; cnt.textContent = (i + 1) + ' / ' + items.length;
+    }
+    function open(k) { last = D.activeElement; show(k); box.hidden = false; D.body.style.overflow = 'hidden'; $('.lb-x', box).focus(); }
+    function close() { if (box.hidden) return; box.hidden = true; D.body.style.overflow = ''; if (last && last.focus) last.focus(); }
+    items.forEach(function (b, k) { b.addEventListener('click', function () { open(k); }); });
+    $('.lb-x', box).addEventListener('click', close); $('.lb-p', box).addEventListener('click', function () { show(i - 1); }); $('.lb-n', box).addEventListener('click', function () { show(i + 1); });
+    box.addEventListener('mousedown', function (e) { if (e.target === box) close(); });
+    D.addEventListener('keydown', function (e) {
+      if (box.hidden) return;
+      if (e.key === 'Escape') close(); if (e.key === 'ArrowRight') show(i + 1); if (e.key === 'ArrowLeft') show(i - 1);
+    }, true);
+    EX.onLang(function () { if (!box.hidden) show(i); });
+  }
+
   /* ====================================================================== boot */
   D.addEventListener('DOMContentLoaded', function () {
+    initLightbox();
     $$('[data-widget]').forEach(function (root) {
       var name = root.dataset.widget, fn = inits[name]; if (!fn) return;
       var data = root.dataset.src ? J(root.dataset.src) : null;
